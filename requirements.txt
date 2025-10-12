@@ -3,6 +3,7 @@ html5lib==1.1
 jinja2==3.1.6
 langchain==0.3.27
 langchain-astradb==0.6.1
+langchain-groq==0.3.8
 langchain-openai==0.3.35
 langchain-core==0.3.79
 lxml==6.0.2
