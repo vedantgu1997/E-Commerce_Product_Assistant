@@ -11,3 +11,4 @@ wheels/
 
 #other files
 get_lib_versions.py
+.env
