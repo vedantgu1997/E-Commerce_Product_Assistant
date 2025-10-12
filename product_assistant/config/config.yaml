@@ -2,8 +2,8 @@ astra_db:
   collection_name: "ecommercedata"
 
 embedding_model:
-  provider: "google"
-  model_name: "models/text-embedding-004"
+  provider: "OpenAI"
+  model_name: "text-embedding-3-small"
 
 retriever:
   top_k: 10
@@ -16,7 +16,8 @@ llm:
     max_output_tokens: 2048
 
   openai:
-    provider: "openai"
+    provider: "OpenAI"
+    type: "ChatOpenAI"
     model_name: "gpt-4o"
     temperature: 0
     max_output_tokens: 2048
