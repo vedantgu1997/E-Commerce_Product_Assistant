@@ -8,19 +8,20 @@ from product_assistant.utils.model_loader import ModelLoader
 from product_assistant.utils.config_loader import load_config
 
 class DataIngestion:
-    '''
-    Class to handle data transformations and ingestion into AstraDB vector store.
-    '''
+    """
+    Class to handle data transformation and ingestion into AstraDB vector store.
+    """
+
     def __init__(self):
-        '''
-        Initialize the DataIngestion class.
-        '''
+        """
+        Initialize environment variables, embedding model, and set CSV file path.
+        """
         print("Initializing DataIngestion pipeline...")
-        self.model_loader = ModelLoader()
+        self.model_loader=ModelLoader()
         self._load_env_variables()
         self.csv_path = self._get_csv_path()
         self.product_data = self._load_csv()
-        self.config = load_config()
+        self.config=load_config()
 
     def _load_env_variables(self):
         '''
@@ -42,98 +43,97 @@ class DataIngestion:
         self.astra_db_application_token = os.getenv('ASTRA_DB_APPLICATION_TOKEN')
         self.astra_db_keyspace = os.getenv('ASTRA_DB_KEYSPACE')
 
+       
+
     def _get_csv_path(self):
-        '''
-        Get the path to the CSV file containing product reviews.
-        '''
+        """
+        Get path to the CSV file located inside 'data' folder.
+        """
         current_dir = os.getcwd()
-        csv_path = os.path.join(current_dir, 'data', 'product_reviews.csv')
+        csv_path = os.path.join(current_dir,'data', 'product_reviews.csv')
 
         if not os.path.exists(csv_path):
-            raise FileNotFoundError(f'CSV file not found at path: {csv_path}')
+            raise FileNotFoundError(f"CSV file not found at: {csv_path}")
 
         return csv_path
 
     def _load_csv(self):
-        '''
-        Load the CSV file into a pandas DataFrame.
-        '''
+        """
+        Load product data from CSV.
+        """
         df = pd.read_csv(self.csv_path)
-        expected_columns = {'product_id', 'product_title', 'rating', 'total_reviews', 'price', 'top_reviews'}
+        expected_columns = {'product_id','product_title', 'rating', 'total_reviews','price', 'top_reviews'}
 
         if not expected_columns.issubset(set(df.columns)):
-            raise ValueError(f'CSV file is missing required columns. Expected columns: {expected_columns}')
+            raise ValueError(f"CSV must contain columns: {expected_columns}")
 
         return df
 
     def transform_data(self):
-        '''
-        Transform the data for ingestion.
-        '''
+        """
+        Transform product data into list of LangChain Document objects.
+        """
         product_list = []
 
         for _, row in self.product_data.iterrows():
             product_entry = {
-                'product_id': row['product_id'],
-                'product_title': row['product_title'],
-                'rating': row['rating'],
-                'total_reviews': row['total_reviews'],
-                'price': row['price'],
-                'top_reviews': row['top_reviews']
-            }
+                    "product_id": row["product_id"],
+                    "product_title": row["product_title"],
+                    "rating": row["rating"],
+                    "total_reviews": row["total_reviews"],
+                    "price": row["price"],
+                    "top_reviews": row["top_reviews"]
+                }
             product_list.append(product_entry)
 
         documents = []
-
         for entry in product_list:
-            metadata = (
-                f"product_id: {entry['product_id']}\n"
-                f"product_title: {entry['product_title']}\n"
-                f"rating: {entry['rating']}\n"
-                f"total_reviews: {entry['total_reviews']}\n"
-                f"price: {entry['price']}\n"
-                f"top_reviews: {entry['top_reviews']}\n"
-            )
-            doc = Document(page_content=entry['top_reviews'], metadata=metadata)
+            metadata = {
+                    "product_id": entry["product_id"],
+                    "product_title": entry["product_title"],
+                    "rating": entry["rating"],
+                    "total_reviews": entry["total_reviews"],
+                    "price": entry["price"]
+            }
+            doc = Document(page_content=entry["top_reviews"], metadata=metadata)
             documents.append(doc)
 
-        print(f"Transformed {len(documents)} documents for ingestion.")
+        print(f"Transformed {len(documents)} documents.")
         return documents
 
-
     def store_in_vector_db(self, documents: List[Document]):
-        '''
-        Store the transformed data into AstraDB vector store.
-        '''
-        collection_name = self.config['astra_db']['collection_name']
-        vs = AstraDBVectorStore(
-            embedding=self.model_loader.load_embeddings(),
+        """
+        Store documents into AstraDB vector store.
+        """
+        collection_name=self.config["astra_db"]["collection_name"]
+        vstore = AstraDBVectorStore(
+            embedding= self.model_loader.load_embeddings(),
             collection_name=collection_name,
             api_endpoint=self.astra_db_api_endpoint,
             token=self.astra_db_application_token,
-            namespace=self.astra_db_keyspace
+            namespace=self.astra_db_keyspace,
         )
 
-        inserted_ids = vs.add_documents(documents)
-        print(f"Inserted {len(inserted_ids)} documents into AstraDB collection '{collection_name}'.")
-        return vs, inserted_ids
+        inserted_ids = vstore.add_documents(documents)
+        print(f"Successfully inserted {len(inserted_ids)} documents into AstraDB.")
+        return vstore, inserted_ids
 
     def run_pipeline(self):
-        '''
-        Run the complete data ingestion pipeline.
-        '''
+        """
+        Run the full data ingestion pipeline: transform data and store into vector DB.
+        """
         documents = self.transform_data()
-        vs, _ = self.store_in_vector_db(documents)
+        vstore, _ = self.store_in_vector_db(documents)
 
+        #Optionally do a quick search
         query = "Can you tell me the low budget iphone?"
-        results = vs.similarity_search(query)
+        results = vstore.similarity_search(query)
 
-        print(f'Sample search results for query "{query}":')
-
+        print(f"\nSample search results for query: '{query}'")
         for res in results:
-            print(f'Content: {res.page_content}\nMetadata: {res.metadata}\n')
+            print(f"Content: {res.page_content}\nMetadata: {res.metadata}\n")
 
+# Run if this file is executed directly
 if __name__ == "__main__":
     ingestion = DataIngestion()
     ingestion.run_pipeline()
-
