@@ -88,7 +88,7 @@ class DataIngestion:
         for entry in product_list:
             metadata = (
                 f"product_id: {entry['product_id']}\n"
-                f"title: {entry['product_title']}\n"
+                f"product_title: {entry['product_title']}\n"
                 f"rating: {entry['rating']}\n"
                 f"total_reviews: {entry['total_reviews']}\n"
                 f"price: {entry['price']}\n"
