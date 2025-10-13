@@ -6,6 +6,7 @@ langchain-astradb==0.6.1
 langchain-groq==0.3.8
 langchain-openai==0.3.35
 langchain-core==0.3.79
+langgraph==0.6.10
 lxml==6.0.2
 python-multipart==0.0.20
 python-dotenv==1.1.1
