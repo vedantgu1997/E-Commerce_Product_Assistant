@@ -18,6 +18,8 @@ undetected-chromedriver==3.5.5
 uvicorn==0.37.0
 fastapi==0.119.1
 ragas==0.3.7
+langchain-mcp-adapters==0.1.11
+mcp==1.18.0
 
 
 -e .
