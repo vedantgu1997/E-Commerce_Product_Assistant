@@ -4,6 +4,8 @@ from typing import List
 from product_assistant.utils.model_loader import ModelLoader
 from product_assistant.utils.config_loader import load_config
 from dotenv import load_dotenv
+from langchain.retrievers.document_compressors import LLMChainFilter
+from langchain.retrievers import ContextualCompressionRetriever
 
 class Retriever:
     def __init__(self):
@@ -47,9 +49,24 @@ class Retriever:
 
         if not self.retriever:
             top_k = self.config['retriever']['top_k'] if 'retriever' in self.config else 3
-            retriever = self.vs.as_retriever(search_kwargs={"k": top_k})
+            mmr_retriever = self.vs.as_retriever(
+                search_type="mmr",
+                search_kwargs={"k": top_k,
+                               "fetch_k": 20,
+                               "lambda_mult": 0.7,
+                               "score_threshold": 0.3
+                               }
+            )
+            llm = self.model_loader.load_llm()
+
+            compressor = LLMChainFilter.from_llm(llm)
+
+            self.retriever = ContextualCompressionRetriever(
+                base_compressor=compressor,
+                base_retriever=mmr_retriever    
+            )
             print("Retriever loaded successfully.")
-            return retriever
+            return self.retriever
 
     def call_retriever(self, query):
         retriever = self.load_retriever()
