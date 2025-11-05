@@ -6,6 +6,7 @@ from langchain_core.documents import Document
 from langchain_astradb import AstraDBVectorStore
 from product_assistant.utils.model_loader import ModelLoader
 from product_assistant.utils.config_loader import load_config
+from logger import GLOBAL_LOGGER as log
 
 class DataIngestion:
     """
@@ -16,7 +17,7 @@ class DataIngestion:
         """
         Initialize environment variables, embedding model, and set CSV file path.
         """
-        print("Initializing DataIngestion pipeline...")
+        log.info("Initializing DataIngestion pipeline...")
         self.model_loader=ModelLoader()
         self._load_env_variables()
         self.csv_path = self._get_csv_path()
@@ -35,6 +36,7 @@ class DataIngestion:
 
         missing_vars = [var for var in required_vars if os.getenv(var) is None]
         if missing_vars:
+            log.error(f"Missing required environment variables: {', '.join(missing_vars)}")
             raise EnvironmentError(f'Missing required environment variables: {", ".join(missing_vars)}')
         
         self.groq_api_key = os.getenv('GROQ_API_KEY')
@@ -53,6 +55,7 @@ class DataIngestion:
         csv_path = os.path.join(current_dir,'data', 'product_reviews.csv')
 
         if not os.path.exists(csv_path):
+            log.error(f"CSV file not found at: {csv_path}")
             raise FileNotFoundError(f"CSV file not found at: {csv_path}")
 
         return csv_path
@@ -65,6 +68,7 @@ class DataIngestion:
         expected_columns = {'product_id','product_title', 'rating', 'total_reviews','price', 'top_reviews'}
 
         if not expected_columns.issubset(set(df.columns)):
+            log.error(f"CSV must contain columns: {expected_columns}")
             raise ValueError(f"CSV must contain columns: {expected_columns}")
 
         return df
@@ -98,7 +102,7 @@ class DataIngestion:
             doc = Document(page_content=entry["top_reviews"], metadata=metadata)
             documents.append(doc)
 
-        print(f"Transformed {len(documents)} documents.")
+        log.info(f"Transformed {len(documents)} documents.")
         return documents
 
     def store_in_vector_db(self, documents: List[Document]):
@@ -115,7 +119,7 @@ class DataIngestion:
         )
 
         inserted_ids = vstore.add_documents(documents)
-        print(f"Successfully inserted {len(inserted_ids)} documents into AstraDB.")
+        log.info(f"Successfully inserted {len(inserted_ids)} documents into AstraDB.")
         return vstore, inserted_ids
 
     def run_pipeline(self):
@@ -129,9 +133,9 @@ class DataIngestion:
         query = "Can you tell me the low budget iphone?"
         results = vstore.similarity_search(query)
 
-        print(f"\nSample search results for query: '{query}'")
+        log.info(f"\nSample search results for query: '{query}'")
         for res in results:
-            print(f"Content: {res.page_content}\nMetadata: {res.metadata}\n")
+            log.info(f"Content: {res.page_content}\nMetadata: {res.metadata}\n")
 
 # Run if this file is executed directly
 if __name__ == "__main__":
